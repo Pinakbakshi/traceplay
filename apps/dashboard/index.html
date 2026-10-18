@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TracePlay | UI-to-Backend Impact Testing Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #0a0f1d;
+    --card-bg: #111827;
+    --card-border: #1f2937;
+    --text-primary: #f9fafb;
+    --text-muted: #9ca3af;
+    --primary: #0284c7;
+    --primary-hover: #0369a1;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --purple: #8b5cf6;
+    --cyan: #06b6d4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
+  body { background: var(--bg-dark); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; }
+  
+  /* Top Navigation */
+  header {
+    background: #0d1322;
+    border-bottom: 1px solid var(--card-border);
+    padding: 14px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .logo-group { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, #0284c7, #8b5cf6); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; }
+  .logo-text { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; background: linear-gradient(90deg, #38bdf8, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  
+  .header-actions { display: flex; align-items: center; gap: 12px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.875rem; border: none; cursor: pointer; transition: all 0.2s; }
+  .btn-qa { background: #059669; color: #fff; }
+  .btn-qa:hover { background: #047857; }
+  .btn-regression { background: #0284c7; color: #fff; }
+  .btn-regression:hover { background: #0369a1; }
+  .btn-debug { background: #7c3aed; color: #fff; }
+  .btn-debug:hover { background: #6d28d9; }
+  .btn-secondary { background: #1f2937; color: #e5e7eb; border: 1px solid #374151; }
+  .btn-secondary:hover { background: #374151; }
+
+  /* Main Layout */
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; width: 100%; flex: 1; display: flex; flex-direction: column; gap: 24px; }
+  
+  /* Stats Grid */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+  .stat-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 18px; }
+  .stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-val { font-size: 1.75rem; font-weight: 700; }
+
+  /* Tabs Bar */
+  .tabs-bar { display: flex; border-bottom: 1px solid var(--card-border); gap: 8px; }
+  .tab-item { padding: 10px 18px; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .tab-item.active { color: #38bdf8; border-color: #38bdf8; }
+  .tab-item:hover:not(.active) { color: #e5e7eb; }
+
+  /* Panels */
+  .panel { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 24px; display: none; }
+  .panel.active { display: block; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .panel-title { font-size: 1.2rem; font-weight: 700; color: #f9fafb; display: flex; align-items: center; gap: 10px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+  th, td { padding: 12px 14px; border-bottom: 1px solid var(--card-border); }
+  th { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+  tr:hover { background: rgba(255,255,255,0.02); }
+
+  /* Badges & Tags */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+  .badge-passed { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+  .badge-failed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+  .badge-candidate { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+  .badge-approved { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #38bdf8; background: #080d1a; padding: 2px 6px; border-radius: 4px; }
+
+  /* Graph Diagram Box */
+  .graph-container { background: #080d1a; border: 1px solid #1e293b; border-radius: 10px; padding: 20px; min-height: 380px; position: relative; overflow-x: auto; }
+  .node-legend { display: flex; gap: 16px; margin-bottom: 16px; font-size: 0.8rem; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal { background: #111827; border: 1px solid #374151; border-radius: 14px; width: 500px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-group">
+    <div class="logo-icon">TP</div>
+    <div>
+      <div class="logo-text">TracePlay</div>
+      <div style="font-size: 0.75rem; color: var(--text-muted);">UI-to-Backend Impact Testing Platform</div>
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <button class="btn btn-qa" onclick="triggerRun('first_round_qa')">
+      <span>▶ Run First-Round QA</span>
+    </button>
+    <button class="btn btn-regression" onclick="triggerRun('regression')">
+      <span>⚡ Run Regression Tests</span>
+    </button>
+    <button class="btn btn-debug" onclick="triggerRun('step_by_step')">
+      <span>🐞 Step-by-Step Debug</span>
+    </button>
+    <button class="btn btn-secondary" onclick="exportReport('html')">
+      <span>📄 Export Report</span>
+    </button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Target URL Testing Launcher Card -->
+  <div style="background: linear-gradient(135deg, #0d1527, #131d33); border: 1px solid #0284c7; border-radius: 12px; padding: 20px 24px; box-shadow: 0 4px 25px rgba(2, 132, 199, 0.2);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.3rem;">🌐</span>
+        <h2 style="font-size: 1.15rem; font-weight: 700; color: #fff;">Test Any Website Link</h2>
+        <span class="badge badge-candidate">Autonomous Explorer</span>
+      </div>
+      <div style="font-size: 0.8rem; color: #94a3b8;">
+        Discovers UI controls, intercepts network calls, checks console errors, and verifies debouncing
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center;">
+      <input type="text" id="target-url-input" placeholder="Enter target website URL (e.g. http://127.0.0.1:5001 or https://example.com)..."
+             value="http://127.0.0.1:5001"
+             style="background: #080d1a; border: 1px solid #374151; border-radius: 8px; padding: 12px 16px; color: #fff; font-size: 0.95rem; width: 100%; box-sizing: border-box;" />
+
+      <select id="target-mode-select" style="background: #080d1a; border: 1px solid #374151; border-radius: 8px; padding: 12px 14px; color: #fff; font-size: 0.9rem;">
+        <option value="first_round_qa">First-Round QA (Baseline)</option>
+        <option value="regression">Regression Mode (vs Baseline)</option>
+        <option value="stress_repeat">Multi-Click & Debounce Stress</option>
+      </select>
+
+      <button class="btn btn-qa" style="padding: 12px 22px; font-size: 0.95rem;" onclick="launchUrlTest()">
+        <span>🚀 Test Website Link</span>
+      </button>
+    </div>
+
+    <!-- Live execution progress indicator (hidden until test launched) -->
+    <div id="live-test-banner" style="display: none; margin-top: 16px; background: #080d1a; border: 1px solid #0284c7; border-radius: 8px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-weight: 700; color: #38bdf8;" id="live-test-status">🔄 Test in Progress...</span>
+        <span style="font-size: 0.8rem; color: #94a3b8;" id="live-step-count">Step 0</span>
+      </div>
+      <div style="background: #1e293b; border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 10px;">
+        <div id="live-progress-bar" style="background: #38bdf8; height: 100%; width: 20%; transition: width 0.3s;"></div>
+      </div>
+      <div id="live-log-box" style="font-family: monospace; font-size: 0.8rem; color: #94a3b8; max-height: 80px; overflow-y: auto;">
+        Waiting for browser launch...
+      </div>
+    </div>
+  </div>
+
+  <!-- Overview Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Active Project</div>
+      <div class="stat-val" style="font-size: 1.25rem; color: #38bdf8;" id="proj-name">User Account Service</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Latest Run Status</div>
+      <div class="stat-val" id="stat-run-status"><span class="badge badge-passed">PASS</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Baseline Status</div>
+      <div class="stat-val" id="stat-baseline-status" style="font-size: 1.25rem;"><span class="badge badge-approved">Approved</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Verified Data Diffs</div>
+      <div class="stat-val" id="stat-diff-count">2</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Regressions Detected</div>
+      <div class="stat-val" id="stat-reg-count" style="color: #34d399;">0</div>
+    </div>
+  </div>
+
+  <!-- Run Selector Bar -->
+  <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">SELECT TEST RUN:</span>
+      <select id="run-select" onchange="loadSelectedRun()" style="background: #0b1120; border: 1px solid #374151; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.9rem;">
+        <option value="">Loading test runs...</option>
+      </select>
+    </div>
+    <div id="baseline-action-container">
+      <button class="btn btn-secondary" id="btn-approve-baseline" onclick="approveCurrentBaseline()">
+        ⭐ Approve as Baseline
+      </button>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="tabs-bar">
+    <div class="tab-item active" onclick="switchTab('timeline')">Interactions Timeline</div>
+    <div class="tab-item" onclick="switchTab('diffs')">Database State Diffs</div>
+    <div class="tab-item" onclick="switchTab('timings')">Latency & Timings</div>
+    <div class="tab-item" onclick="switchTab('regressions')">Regression Comparison</div>
+    <div class="tab-item" onclick="switchTab('graph')">Internal Traceability Graph</div>
+    <div class="tab-item" onclick="switchTab('runs')">All Test Runs</div>
+  </div>
+
+  <!-- Tab 1: Timeline -->
+  <div id="panel-timeline" class="panel active">
+    <div class="panel-header">
+      <div class="panel-title">Chronological Interaction Steps</div>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">Step-by-step user actions and correlated runtime events</span>
+    </div>
+    <table id="table-timeline">
+      <thead>
+        <tr>
+          <th>Step</th>
+          <th>Action Label</th>
+          <th>Action Type</th>
+          <th>Status</th>
+          <th>Page URL (Before → After)</th>
+          <th>Duration</th>
+          <th>Events Captured</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading interactions...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tab 2: Database Diffs -->
+  <div id="panel-diffs" class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Verified Database State Diffs</div>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">Scoped before/after snapshots evaluated against expected and forbidden rules</span>
+    </div>
+    <table id="table-diffs">
+      <thead>
+        <tr>
+          <th>Entity</th>
+          <th>Field</th>
+          <th>Change Type</th>
+          <th>Expectation Status</th>
+          <th>Causality</th>
+          <th>Before → After Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading data diffs...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tab 3: Latency & Timings -->
+  <div id="panel-timings" class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Latency & Timing Attribution</div>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">Measured durations across UI action, network, backend spans, and DB operations</span>
+    </div>
+    <table id="table-timings">
+      <thead>
+        <tr>
+          <th>Metric Name</th>
+          <th>Duration</th>
+          <th>Baseline Duration</th>
+          <th>Delta</th>
+          <th>Status</th>
+          <th>Measurement Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading timings...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tab 4: Regression Comparison -->
+  <div id="panel-regressions" class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Baseline Regression & Anomaly Comparison</div>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">Automated detection of missing requests, latency regressions, and unexpected data mutations</span>
+    </div>
+    <div id="regressions-content">
+      <table id="table-regressions">
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Difference Type</th>
+            <th>Reason</th>
+            <th>Delta Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading regression comparison...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 5: Traceability Graph -->
+  <div id="panel-graph" class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Internal Evidence & Code Impact Graph</div>
+      <div class="node-legend">
+        <span><span class="legend-dot" style="background: #10b981;"></span> Runtime Observed</span>
+        <span><span class="legend-dot" style="background: #38bdf8;"></span> Verified Business Effect</span>
+        <span><span class="legend-dot" style="background: #8b5cf6;"></span> Static Extracted (GitNexus/Graphify)</span>
+      </div>
+    </div>
+    <div class="graph-container" id="graph-display">
+      <table id="table-graph-edges">
+        <thead>
+          <tr>
+            <th>Relationship</th>
+            <th>Source Node</th>
+            <th>Target Node</th>
+            <th>Evidence Class</th>
+            <th>Provenance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading traceability graph...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 6: All Runs -->
+  <div id="panel-runs" class="panel">
+    <div class="panel-header">
+      <div class="panel-title">All Test Runs History</div>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">Complete history of First-Round QA, Regression, and Debug runs</span>
+    </div>
+    <table id="table-all-runs">
+      <thead>
+        <tr>
+          <th>Run ID</th>
+          <th>Test Mode</th>
+          <th>Status</th>
+          <th>Baseline Status</th>
+          <th>Commit SHA</th>
+          <th>Started At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading all runs...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  let currentRunId = null;
+  let allRuns = [];
+
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('panel-' + tabName).classList.add('active');
+  }
+
+  async function fetchRuns() {
+    try {
+      const res = await fetch('/api/runs');
+      allRuns = await res.json();
+      const select = document.getElementById('run-select');
+      select.innerHTML = '';
+
+      if (allRuns.length === 0) {
+        select.innerHTML = '<option value="">No test runs recorded yet</option>';
+        return;
+      }
+
+      allRuns.forEach((r, idx) => {
+        const opt = document.createElement('option');
+        opt.value = r.id;
+        opt.innerText = `Run ${r.id.substring(0,8)} - [${r.test_mode.toUpperCase()}] - ${r.status.toUpperCase()}`;
+        select.appendChild(opt);
+      });
+
+      if (!currentRunId && allRuns.length > 0) {
+        currentRunId = allRuns[0].id;
+      }
+      select.value = currentRunId;
+      loadSelectedRun();
+      renderAllRunsTable();
+    } catch (e) {
+      console.error("Failed to load runs", e);
+    }
+  }
+
+  async function loadSelectedRun() {
+    currentRunId = document.getElementById('run-select').value;
+    if (!currentRunId) return;
+
+    const run = allRuns.find(r => r.id === currentRunId);
+    if (run) {
+      document.getElementById('stat-run-status').innerHTML = `<span class="badge ${run.status === 'passed' ? 'badge-passed' : 'badge-failed'}">${run.status.toUpperCase()}</span>`;
+      document.getElementById('stat-baseline-status').innerHTML = `<span class="badge ${run.baseline_status === 'approved' ? 'badge-approved' : 'badge-candidate'}">${run.baseline_status.toUpperCase()}</span>`;
+      
+      const approveBtn = document.getElementById('btn-approve-baseline');
+      if (run.baseline_status === 'approved') {
+        approveBtn.innerText = '✅ Approved Baseline';
+        approveBtn.disabled = true;
+      } else {
+        approveBtn.innerText = '⭐ Approve as Baseline';
+        approveBtn.disabled = (run.status !== 'passed');
+      }
+    }
+
+    loadTimeline();
+    loadDiffs();
+    loadTimings();
+    loadComparison();
+    loadGraph();
+  }
+
+  async function loadTimeline() {
+    try {
+      const res = await fetch(`/api/runs/${currentRunId}/timeline`);
+      const steps = await res.json();
+      const tbody = document.querySelector('#table-timeline tbody');
+      if (steps.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No interactions recorded.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = steps.map(s => `
+        <tr>
+          <td><span class="mono">Step ${s.step_index}</span></td>
+          <td><b>${s.action_label}</b></td>
+          <td><span class="badge ${s.action_type === 'repeat_click' ? 'badge-candidate' : 'badge-approved'}">${s.action_type}</span></td>
+          <td><span class="badge ${s.status === 'passed' ? 'badge-passed' : 'badge-failed'}">${s.status.toUpperCase()}</span></td>
+          <td><span class="mono">${s.page_url_before || '/'}</span> → <span class="mono">${s.page_url_after || '/'}</span></td>
+          <td>${(s.duration_ms || 120).toFixed(1)}ms</td>
+          <td>${s.network_events_count} reqs | ${s.backend_spans_count} spans | ${s.data_diffs_count} diffs</td>
+        </tr>
+      `).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadDiffs() {
+    try {
+      const res = await fetch(`/api/runs/${currentRunId}/diffs`);
+      const diffs = await res.json();
+      document.getElementById('stat-diff-count').innerText = diffs.length;
+      const tbody = document.querySelector('#table-diffs tbody');
+      if (diffs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No data mutations observed.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = diffs.map(d => `
+        <tr>
+          <td><span class="mono">${d.entity_type}</span></td>
+          <td><b>${d.field_name}</b></td>
+          <td><span class="badge ${d.change_type === 'EXPECTED_CHANGE' ? 'badge-passed' : 'badge-failed'}">${d.change_type}</span></td>
+          <td><span class="badge ${d.expectation_status === 'EXPECTED_CHANGE' ? 'badge-passed' : 'badge-failed'}">${d.expectation_status}</span></td>
+          <td><span class="badge badge-candidate">${d.causality_status}</span></td>
+          <td><span class="mono">${d.before_value_redacted || 'null'}</span> → <span class="mono">${d.after_value_redacted || 'null'}</span></td>
+        </tr>
+      `).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadTimings() {
+    try {
+      const res = await fetch(`/api/runs/${currentRunId}/timings`);
+      const timings = await res.json();
+      const tbody = document.querySelector('#table-timings tbody');
+      if (timings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No timing measurements recorded.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = timings.map(t => `
+        <tr>
+          <td><span class="mono">${t.metric_name}</span></td>
+          <td><b>${t.duration_ms.toFixed(1)}ms</b></td>
+          <td>${t.baseline_duration_ms ? t.baseline_duration_ms.toFixed(1) + 'ms' : 'N/A'}</td>
+          <td>${t.delta_ms !== null ? (t.delta_ms > 0 ? '+' : '') + t.delta_ms.toFixed(1) + 'ms (' + t.delta_percent + '%)' : 'N/A'}</td>
+          <td><span class="badge ${t.threshold_status === 'pass' ? 'badge-passed' : 'badge-failed'}">${t.threshold_status.toUpperCase()}</span></td>
+          <td><span class="mono">${t.measurement_source}</span></td>
+        </tr>
+      `).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadComparison() {
+    try {
+      const res = await fetch(`/api/runs/${currentRunId}/comparison`);
+      const comp = await res.json();
+      document.getElementById('stat-reg-count').innerText = comp.differences_count;
+      document.getElementById('stat-reg-count').style.color = comp.differences_count > 0 ? 'var(--danger)' : 'var(--success)';
+      const tbody = document.querySelector('#table-regressions tbody');
+      if (comp.differences_count === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--success); font-weight: 600;">🎉 No regressions or unexpected mutations detected versus baseline.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = comp.differences.map(d => `
+        <tr>
+          <td><span class="badge badge-failed">${d.severity.toUpperCase()}</span></td>
+          <td><span class="mono">${d.difference_type}</span></td>
+          <td>${d.classification_reason}</td>
+          <td><span class="mono">${JSON.stringify(d.delta)}</span></td>
+        </tr>
+      `).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadGraph() {
+    try {
+      const res = await fetch(`/api/runs/${currentRunId}/graph`);
+      const g = await res.json();
+      const tbody = document.querySelector('#table-graph-edges tbody');
+      if (!g.edges || g.edges.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No graph edges available.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = g.edges.map(e => `
+        <tr>
+          <td><span class="mono">${e.relationship}</span></td>
+          <td><b>${e.source}</b></td>
+          <td><b>${e.target}</b></td>
+          <td><span class="badge ${e.evidence_class === 'runtime_observed' ? 'badge-passed' : e.evidence_class === 'verified' ? 'badge-approved' : 'badge-candidate'}">${e.evidence_class}</span></td>
+          <td><span class="mono">${e.provenance}</span></td>
+        </tr>
+      `).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  function renderAllRunsTable() {
+    const tbody = document.querySelector('#table-all-runs tbody');
+    tbody.innerHTML = allRuns.map(r => `
+      <tr>
+        <td><span class="mono">${r.id.substring(0,8)}</span></td>
+        <td><span class="badge badge-candidate">${r.test_mode}</span></td>
+        <td><span class="badge ${r.status === 'passed' ? 'badge-passed' : 'badge-failed'}">${r.status.toUpperCase()}</span></td>
+        <td><span class="badge ${r.baseline_status === 'approved' ? 'badge-approved' : 'badge-candidate'}">${r.baseline_status.toUpperCase()}</span></td>
+        <td><span class="mono">${r.commit_sha}</span></td>
+        <td>${new Date(r.started_at).toLocaleTimeString()}</td>
+        <td>
+          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="selectRunById('${r.id}')">View</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function selectRunById(id) {
+    document.getElementById('run-select').value = id;
+    loadSelectedRun();
+    switchTab('timeline');
+  }
+
+  async function approveCurrentBaseline() {
+    if (!currentRunId) return;
+    try {
+      const res = await fetch(`/api/runs/${currentRunId}/approve-baseline`, { method: 'POST' });
+      if (res.ok) {
+        alert("Run successfully approved as the project baseline!");
+        fetchRuns();
+      } else {
+        const err = await res.json();
+        alert("Approval failed: " + err.detail);
+      }
+    } catch(e) { alert("Error approving baseline"); }
+  }
+
+  function exportReport(format) {
+    if (!currentRunId) return;
+    window.open(`/api/runs/${currentRunId}/report?format=${format}`, '_blank');
+  }
+
+  async function launchUrlTest() {
+    const targetUrl = document.getElementById('target-url-input').value.trim();
+    const targetMode = document.getElementById('target-mode-select').value;
+    if (!targetUrl) {
+      alert("Please enter a valid website URL");
+      return;
+    }
+
+    const banner = document.getElementById('live-test-banner');
+    const statusText = document.getElementById('live-test-status');
+    const stepCount = document.getElementById('live-step-count');
+    const progressBar = document.getElementById('live-progress-bar');
+    const logBox = document.getElementById('live-log-box');
+
+    banner.style.display = 'block';
+    statusText.innerText = '🔄 Launching autonomous browser agent...';
+    progressBar.style.width = '15%';
+    progressBar.style.background = '#38bdf8';
+    logBox.innerText = `Connecting to target: ${targetUrl}\nMode: ${targetMode.toUpperCase()}`;
+
+    try {
+      const res = await fetch('/api/test-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: targetUrl,
+          test_mode: targetMode,
+          enable_multi_click: true
+        })
+      });
+
+      const data = await res.json();
+      const runId = data.run_id;
+
+      // Start polling
+      let pollCount = 0;
+      const interval = setInterval(async () => {
+        pollCount++;
+        try {
+          const statusRes = await fetch(`/api/test-url/${runId}/status`);
+          const job = await statusRes.json();
+
+          stepCount.innerText = `Interactions: ${job.step_index || 0} | Requests: ${job.captured_requests_count || 0}`;
+          if (job.logs && job.logs.length > 0) {
+            logBox.innerText = job.logs.slice(-4).join('\n');
+          }
+
+          if (job.status === 'running') {
+            const pct = Math.min(85, 20 + pollCount * 8);
+            progressBar.style.width = pct + '%';
+            statusText.innerText = `🔄 Exploring & Testing URL (Step ${job.step_index || 0})...`;
+          } else if (job.status === 'passed' || job.status === 'failed') {
+            clearInterval(interval);
+            progressBar.style.width = '100%';
+            progressBar.style.background = job.status === 'passed' ? '#10b981' : '#ef4444';
+            statusText.innerText = `✅ Test Finished: ${job.status.toUpperCase()}!`;
+            
+            // Reload runs and select this newly created run
+            await fetchRuns();
+            selectRunById(runId);
+            setTimeout(() => { banner.style.display = 'none'; }, 6000);
+          }
+        } catch (err) {
+          console.error("Polling error", err);
+        }
+      }, 900);
+    } catch (e) {
+      alert("Failed to initiate test run: " + e.message);
+      banner.style.display = 'none';
+    }
+  }
+
+  async function triggerRun(mode) {
+    document.getElementById('target-mode-select').value = mode;
+    await launchUrlTest();
+  }
+
+  // Initial load
+  fetchRuns();
+</script>
+</body>
+</html>
