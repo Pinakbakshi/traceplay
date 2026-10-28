@@ -1,5 +1,8 @@
 # TracePlay — UI-to-Backend Impact Testing Platform
 
+> **Project status (2026-10-29):** TracePlay now includes an authenticated REST API contract probe (`test_api_contract.py`) alongside browser-driven testing. Its CI workflow passed **6 unit tests**, including JSON-path checks and sensitive query-value redaction. A real endpoint still requires a reachable target URL and credentials supplied locally.
+
+
 > **Platform Location:** `/Users/pinakpanibakshi/.gemini/antigravity/scratch/traceplay`
 
 TracePlay is an autonomous testing platform that takes any website URL and automatically:
