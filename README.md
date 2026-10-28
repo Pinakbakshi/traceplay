@@ -118,7 +118,8 @@ traceplay/
 │
 ├── packages/
 │   ├── traceplay_runner/
-│   │   └── runner.py                  ← Playwright runner with OTel traceparent injection
+│   │   ├── runner.py                  ← Playwright runner with OTel traceparent injection
+│   │   └── api_contract.py            ← Authenticated REST API contract probe
 │   ├── db_adapter/
 │   │   └── readonly_db_adapter.py     ← Read-only SQLite/PostgreSQL DB snapshotter
 │   └── graph_adapters/
@@ -139,7 +140,8 @@ traceplay/
 │   │   ├── test_redaction.py          ← Unit tests: PII redaction
 │   │   ├── test_timing_engine.py      ← Unit tests: latency/SLA evaluation
 │   │   ├── test_graph_builder.py      ← Unit tests: traceability graph edges
-│   │   └── test_url_tester.py         ← Unit tests: URL tester service
+│   │   ├── test_url_tester.py         ← Unit tests: URL tester service
+│   │   └── test_api_contract.py       ← Unit tests: API status, JSON paths, redaction
 │   └── integration/
 │       └── test_url_testing_flow.py   ← Integration tests: full URL test flow
 │
@@ -149,6 +151,7 @@ traceplay/
 │   ├── traceplay_regression_report.json
 │   └── url_test_report.html
 │
+├── test_api_contract.py               ← CLI for REST API contract checks
 ├── run_demo.py                        ← Master 3-path demo launcher
 └── test_url_live.py                   ← CLI: test any URL from the command line
 ```
