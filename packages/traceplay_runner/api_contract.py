@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import time
 from typing import Any, Iterable
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 
@@ -53,6 +54,17 @@ def evaluate_api_response(
     }
 
 
+def _redact_url(url: str) -> str:
+    """Mask sensitive query parameter values before placing URLs in reports."""
+    parts = urlsplit(url)
+    safe_query = []
+    for key, value in parse_qsl(parts.query, keep_blank_values=True):
+        if any(marker in key.lower() for marker in ("key", "token", "auth", "secret", "password", "signature")):
+            value = "[REDACTED]"
+        safe_query.append((key, value))
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(safe_query), ""))
+
+
 def probe_api_endpoint(
     url: str,
     *,
@@ -90,7 +102,7 @@ def probe_api_endpoint(
         required_json_paths=required_json_paths,
     )
     report.update({
-        "url": str(response.request.url),
+        "url": _redact_url(str(response.request.url)),
         "method": method.upper(),
         "elapsed_ms": elapsed_ms,
         "content_type": response.headers.get("content-type", ""),
