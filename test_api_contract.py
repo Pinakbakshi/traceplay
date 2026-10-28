@@ -62,7 +62,8 @@ def main() -> int:
         )
     except Exception as exc:
         # Avoid printing request headers or their values, which may contain secrets.
-        print(json.dumps({"ok": False, "error": type(exc).__name__, "message": str(exc)}))
+        message = str(exc) if isinstance(exc, ValueError) else "Probe failed; check connectivity and configuration locally (details omitted to avoid leaking credentials)."
+        print(json.dumps({"ok": False, "error": type(exc).__name__, "message": message}))
         return 2
 
     rendered = json.dumps(report, indent=2)
