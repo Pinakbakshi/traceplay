@@ -1,6 +1,6 @@
 import unittest
 
-from packages.traceplay_runner.api_contract import evaluate_api_response, json_path_value
+from packages.traceplay_runner.api_contract import _redact_url, evaluate_api_response, json_path_value
 
 
 class ApiContractProbeTests(unittest.TestCase):
@@ -34,6 +34,13 @@ class ApiContractProbeTests(unittest.TestCase):
         result = evaluate_api_response(401, {"detail": "invalid key"}, expected_status=200)
         self.assertFalse(result["ok"])
         self.assertEqual(result["checks"][0]["actual"], 401)
+
+    def test_redacts_sensitive_query_parameters(self):
+        safe_url = _redact_url("https://example.test/check?symbol=BTCUSDT&api_key=secret&token=private")
+        self.assertIn("symbol=BTCUSDT", safe_url)
+        self.assertNotIn("secret", safe_url)
+        self.assertNotIn("private", safe_url)
+        self.assertIn("%5BREDACTED%5D", safe_url)
 
     def test_reads_nested_json_path(self):
         self.assertEqual(json_path_value({"a": [{"b": 7}]}, "a.0.b"), 7)
